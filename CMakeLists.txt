@@ -17,6 +17,12 @@ add_subdirectory(include/glm)
 
 add_executable(derp
     src/main.cpp src/glad.c
+    include/shader.cpp
+    include/shader.hpp
+)
+
+target_compile_definitions(derp PRIVATE
+    RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources"
 )
 
 target_include_directories(derp PRIVATE

@@ -115,7 +115,7 @@ shader::shader(shader &&other) noexcept
       deleted(std::exchange(other.deleted, true)),
       uniform_map(std::move(other.uniform_map)) {}
 
-shader &shader::operator=(shader &&other) noexcept {
+auto shader::operator=(shader &&other) noexcept -> shader & {
   if (this != &other) {
     if (!deleted && glIsProgram(id)) {
       glDeleteProgram(id);
@@ -127,13 +127,18 @@ shader &shader::operator=(shader &&other) noexcept {
   return *this;
 }
 
-void shader::use() const {
+auto shader::use() const {
   if (deleted) {
     throw std::runtime_error(std::format(
         "[ERROR ] attempted to use deleted shader program with id = {}.", id));
   }
   glUseProgram(id);
   std::println("[DEBUG] program with id = {} used.", id);
+}
+
+auto shader::UniformProxy::get_uniform_name_by_location(uint32_t, int loc)
+    -> std::string {
+  return std::format("uniform @ location {}", loc);
 }
 
 [[nodiscard]] int shader::get_uniform_location(std::string_view name) const {

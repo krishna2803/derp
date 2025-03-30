@@ -110,12 +110,12 @@ shader::~shader() {
   std::println("[DEBUG] program with id = {} deleted.", id);
 }
 
-inline shader::shader(shader &&other) noexcept
+shader::shader(shader &&other) noexcept
     : id(std::exchange(other.id, 0)),
       deleted(std::exchange(other.deleted, true)),
       uniform_map(std::move(other.uniform_map)) {}
 
-inline shader &shader::operator=(shader &&other) noexcept {
+shader &shader::operator=(shader &&other) noexcept {
   if (this != &other) {
     if (!deleted && glIsProgram(id)) {
       glDeleteProgram(id);
@@ -134,10 +134,6 @@ void shader::use() const {
   }
   glUseProgram(id);
   std::println("[DEBUG] program with id = {} used.", id);
-}
-std::string shader::UniformProxy::get_uniform_name_by_location(uint32_t,
-                                                               int loc) {
-  return std::format("uniform @ location {}", loc);
 }
 
 [[nodiscard]] int shader::get_uniform_location(std::string_view name) const {
@@ -166,47 +162,6 @@ std::string shader::UniformProxy::get_uniform_name_by_location(uint32_t,
 
   uniform_map.emplace(std::string(name), location);
   return location;
-}
-
-template <UniformType T>
-const shader::UniformProxy &
-shader::UniformProxy::operator=(const T &value) const {
-  int current_program = 0;
-  glGetIntegerv(GL_CURRENT_PROGRAM, &current_program);
-  if (static_cast<uint32_t>(current_program) != program_id) {
-    throw std::runtime_error(std::format(
-        "Attempted to set uniform for shader program {} ('{}') "
-        "when program {} is active.",
-        program_id, get_uniform_name_by_location(program_id, location),
-        current_program));
-  }
-
-  // the get location thing should through runtime error, but nvm :)
-  assert(location != -1);
-
-  using DecayedT = std::decay_t<T>;
-
-  if constexpr (std::same_as<DecayedT, float>) {
-    glUniform1f(location, value);
-  } else if constexpr (std::same_as<DecayedT, int>) {
-    glUniform1i(location, value);
-  } else if constexpr (std::same_as<DecayedT, bool>) {
-    glUniform1i(location, static_cast<int>(value));
-  } else if constexpr (std::same_as<DecayedT, glm::vec2>) {
-    glUniform2fv(location, 1, glm::value_ptr(value));
-  } else if constexpr (std::same_as<DecayedT, glm::vec3>) {
-    glUniform3fv(location, 1, glm::value_ptr(value));
-  } else if constexpr (std::same_as<DecayedT, glm::vec4>) {
-    glUniform4fv(location, 1, glm::value_ptr(value));
-  } else if constexpr (std::same_as<DecayedT, glm::mat3>) {
-    glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(value));
-  } else if constexpr (std::same_as<DecayedT, glm::mat4>) {
-    glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
-  }
-
-  // TODO: check for OpenGL errors
-
-  return *this;
 }
 
 } // namespace derp

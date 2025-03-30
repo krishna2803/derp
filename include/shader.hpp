@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <cassert>       // assert
 #include <concepts>      // std::same_as, std::convertible_to
 #include <cstdint>       // uint32_t
 #include <format>        // std::format
@@ -54,9 +55,6 @@ struct StringViewHash {
 };
 
 class shader {
-private:
-  class UniformProxy;
-
 public:
   shader() = delete;
   shader(const std::string &vert_path, const std::string &frag_path);
@@ -71,6 +69,70 @@ public:
   ~shader();
 
   void use() const;
+
+  class UniformProxy {
+    friend class shader;
+
+    uint32_t program_id;
+    int location;
+
+    UniformProxy(const uint32_t prog_id, const int loc)
+        : program_id(prog_id), location(loc) {}
+    // Don't allow default construction or copying
+
+  public:
+    UniformProxy() = delete;
+    UniformProxy(const UniformProxy &) = delete;
+    UniformProxy &operator=(const UniformProxy &) = delete;
+    UniformProxy(UniformProxy &&) = default;
+    UniformProxy &operator=(UniformProxy &&) = default;
+
+    template <UniformType T>
+    const UniformProxy &operator=(const T &value) const {
+      int current_program = 0;
+      glGetIntegerv(GL_CURRENT_PROGRAM, &current_program);
+      if (static_cast<uint32_t>(current_program) != program_id) {
+        throw std::runtime_error(std::format(
+            "Attempted to set uniform for shader program {} ('{}') "
+            "when program {} is active.",
+            program_id, get_uniform_name_by_location(program_id, location),
+            current_program));
+      }
+
+      assert(location != -1 && "Uniform location should be valid here");
+
+      using DecayedT = std::decay_t<T>;
+
+      if constexpr (std::same_as<DecayedT, float>) {
+        glUniform1f(location, value);
+      } else if constexpr (std::same_as<DecayedT, int>) {
+        glUniform1i(location, value);
+      } else if constexpr (std::same_as<DecayedT, bool>) {
+        glUniform1i(location, static_cast<int>(value));
+      } else if constexpr (std::same_as<DecayedT, glm::vec2>) {
+        glUniform2fv(location, 1, glm::value_ptr(value));
+      } else if constexpr (std::same_as<DecayedT, glm::vec3>) {
+        glUniform3fv(location, 1, glm::value_ptr(value));
+      } else if constexpr (std::same_as<DecayedT, glm::vec4>) {
+        glUniform4fv(location, 1, glm::value_ptr(value));
+      } else if constexpr (std::same_as<DecayedT, glm::mat3>) {
+        glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(value));
+      } else if constexpr (std::same_as<DecayedT, glm::mat4>) {
+        glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
+      }
+      // TODO: Add glGetError check here?
+      return *this;
+    }
+
+    explicit operator int() const { return location; }
+
+    // Note: This method doesn't actually query OpenGL for the name.
+    // It just provides a descriptive string based on the location.
+    static std::string get_uniform_name_by_location(uint32_t /*prog_id*/,
+                                                    int loc) {
+      return std::format("uniform @ location {}", loc);
+    }
+  }; // UniformProxy
 
   template <typename T>
     requires std::convertible_to<T, std::string_view>
@@ -95,24 +157,6 @@ private:
 
   [[nodiscard]] int get_uniform_location(std::string_view name) const;
 
-  class UniformProxy {
-    friend class shader;
-
-    uint32_t program_id;
-    int location;
-
-    UniformProxy(const uint32_t prog_id, const int loc)
-        : program_id(prog_id), location(loc) {}
-
-  public:
-    template <UniformType T>
-    const UniformProxy &operator=(const T &value) const;
-
-    operator int() const { return location; }
-
-    static std::string get_uniform_name_by_location(uint32_t /*prog_id*/,
-                                                    int loc);
-  }; // UniformProxy
 }; // shader
 
 } // namespace derp

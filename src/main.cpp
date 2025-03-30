@@ -10,7 +10,6 @@
 #include "shader.hpp"
 
 #include <cstdint>
-#include <iostream>
 #include <print>
 
 #include <glad/glad.h>
@@ -27,7 +26,7 @@ int main() {
   std::println("[INFO] Starting...");
 
   if (!glfwInit()) {
-    std::println(std::cerr, "[ERROR] Couldn't initialize GLFW.");
+    std::println("[ERROR] Couldn't initialize GLFW.");
     return -1;
   }
 
@@ -42,7 +41,7 @@ int main() {
   GLFWwindow *window = glfwCreateWindow(640, 480, "derp", nullptr, nullptr);
   if (!window) {
     glfwTerminate();
-    std::println(std::cerr, "[ERROR] Couldn't create GLFW window.");
+    std::println("[ERROR] Couldn't create GLFW window.");
     return -1;
   }
 
@@ -50,7 +49,7 @@ int main() {
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
   if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
-    std::println(std::cerr, "[ERROR] Couldn't initialize GLAD.");
+    std::println("[ERROR] Couldn't initialize GLAD.");
     glfwDestroyWindow(window);
     glfwTerminate();
     return -1;

@@ -10,7 +10,6 @@
 #include "shader.hpp"
 
 #include <fstream>
-#include <iostream>
 #include <print> // std::print
 
 namespace derp {

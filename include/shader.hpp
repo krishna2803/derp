@@ -9,33 +9,64 @@
 
 #pragma once
 
-#include "glm/gtc/type_ptr.hpp"
+#include <concepts>      // std::same_as, std::convertible_to
+#include <cstdint>       // uint32_t
+#include <format>        // std::format
+#include <functional>    // std::hash, std::equal_to
+#include <stdexcept>     // std::runtime_error
+#include <string>        // std::string
+#include <string_view>   // string_view
+#include <type_traits>   // std::decay_t
+#include <unordered_map> // std::unordered_map
+#include <utility>       // For std::forward, std::move, std::exchange
+
+#include <glad/glad.h>
 
 #include <glm/glm.hpp>
-
-#include <cstdint>
-#include <format>
-#include <glad/glad.h>
-#include <stdexcept>
-#include <string>
-#include <unordered_map>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace derp {
 
 template <typename T>
-concept UniformType = requires(T value, int location) {
-  requires std::same_as<T, float> || std::same_as<T, int> ||
-               std::same_as<T, bool> || std::same_as<T, glm::vec2> ||
-               std::same_as<T, glm::vec3> || std::same_as<T, glm::vec4> ||
-               std::same_as<T, glm::mat3> || std::same_as<T, glm::mat4>;
+concept UniformType = requires {
+  requires std::same_as<std::decay_t<T>, float> ||
+               std::same_as<std::decay_t<T>, int> ||
+               std::same_as<std::decay_t<T>, bool> ||
+               std::same_as<std::decay_t<T>, glm::vec2> ||
+               std::same_as<std::decay_t<T>, glm::vec3> ||
+               std::same_as<std::decay_t<T>, glm::vec4> ||
+               std::same_as<std::decay_t<T>, glm::mat3> ||
+               std::same_as<std::decay_t<T>, glm::mat4>;
+};
+
+struct StringViewHash {
+  using is_transparent = void;
+  [[nodiscard]] std::size_t
+  operator()(const std::string_view sv) const noexcept {
+    return std::hash<std::string_view>{}(sv);
+  }
+  [[nodiscard]] std::size_t operator()(const std::string &s) const noexcept {
+    return std::hash<std::string>{}(s);
+  }
+  [[nodiscard]] std::size_t operator()(const char *cstr) const noexcept {
+    return std::hash<std::string_view>{}(cstr);
+  }
 };
 
 class shader {
+private:
+  class UniformProxy;
+
 public:
   shader() = delete;
   shader(const std::string &vert_path, const std::string &frag_path);
   // shader(const std::string &vert_path, const std::string &frag_path,
   // const std::string &geom_path);
+
+  shader(const shader &) = delete;
+  shader &operator=(const shader &) = delete;
+  shader(shader &&other) noexcept;
+  shader &operator=(shader &&other) noexcept;
 
   ~shader();
 
@@ -43,59 +74,45 @@ public:
 
   template <typename T>
     requires std::convertible_to<T, std::string_view>
-  auto operator[](T &&name) const -> int {
-    const int location = get_uniform_location(std::forward<T>(name));
-    return location;
+  [[nodiscard]]
+  auto operator[](T &&name) const -> UniformProxy {
+    const int location =
+        get_uniform_location(std::string_view(std::forward<T>(name)));
+    return {id, location};
   }
 
 private:
-  uint32_t id;
-  bool deleted;
-  mutable std::unordered_map<std::string, int> uniform_map;
+  uint32_t id = 0;
+  bool deleted = true;
 
-  [[nodiscard]] int get_uniform_location(const std::string_view name) const {
-    std::string name_str(name);
-    if (const auto it = uniform_map.find(name_str); it != uniform_map.end()) {
-      return it->second;
-    }
+  using UniformMap =
+      std::unordered_map<std::string, int,
+                         StringViewHash, // Use our transparent hash
+                         std::equal_to<> // Use transparent equality
+                                         // (std::equal_to<void>)
+                         >;
+  mutable UniformMap uniform_map;
 
-    const int location = glGetUniformLocation(id, name_str.c_str());
-    if (location == -1) {
-      throw std::runtime_error(std::format("Uniform '{}' not found", name));
-    }
-    uniform_map.emplace(name_str, location);
-    return location;
-  }
+  [[nodiscard]] int get_uniform_location(std::string_view name) const;
 
   class UniformProxy {
-    uint32_t program;
+    friend class shader;
+
+    uint32_t program_id;
     int location;
 
-  public:
-    UniformProxy(const uint32_t prog, const int loc)
-        : program(prog), location(loc) {}
+    UniformProxy(const uint32_t prog_id, const int loc)
+        : program_id(prog_id), location(loc) {}
 
-    template <UniformType T> auto operator=(T &&value) const {
-      if constexpr (std::same_as<std::decay_t<T>, float>) {
-        glUniform1f(location, value);
-      } else if constexpr (std::same_as<std::decay_t<T>, int>) {
-        glUniform1i(location, value);
-      } else if constexpr (std::same_as<std::decay_t<T>, bool>) {
-        glUniform1i(location, static_cast<int>(value));
-      } else if constexpr (std::same_as<std::decay_t<T>, glm::vec2>) {
-        glUniform2fv(location, 1, glm::value_ptr(value));
-      } else if constexpr (std::same_as<std::decay_t<T>, glm::vec3>) {
-        glUniform3fv(location, 1, glm::value_ptr(value));
-      } else if constexpr (std::same_as<std::decay_t<T>, glm::vec4>) {
-        glUniform4fv(location, 1, glm::value_ptr(value));
-      } else if constexpr (std::same_as<std::decay_t<T>, glm::mat3>) {
-        glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(value));
-      } else if constexpr (std::same_as<std::decay_t<T>, glm::mat4>) {
-        glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
-      }
-      return *this;
-    }
-  };
-};
+  public:
+    template <UniformType T>
+    const UniformProxy &operator=(const T &value) const;
+
+    operator int() const { return location; }
+
+    static std::string get_uniform_name_by_location(uint32_t /*prog_id*/,
+                                                    int loc);
+  }; // UniformProxy
+}; // shader
 
 } // namespace derp

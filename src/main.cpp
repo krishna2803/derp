@@ -1,3 +1,15 @@
+//===-- Main executable for derp ------------------------------------------===//
+//
+// Copyright (c) 2025 Krishna Pandey. All rights reserved.
+// SPDX-License-Identifier: MIT
+// Part of the derp project, under the MIT License.
+// See https://opensource.org/licenses/MIT for license information.
+//
+//===----------------------------------------------------------------------===//
+
+#include "shader.hpp"
+
+#include <cstdint>
 #include <iostream>
 #include <print>
 
@@ -5,7 +17,8 @@
 
 #include <GLFW/glfw3.h>
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
+void framebuffer_size_callback(GLFWwindow *window, const int width,
+                               const int height) {
   glViewport(0, 0, width, height);
 }
 
@@ -70,56 +83,28 @@ int main() {
   glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, false, 0);
   glVertexArrayAttribBinding(vao, 0, 0);
 
-  const auto vertex_src = R"(#version 460 core
-                              layout(location=0) in vec3 a_pos;
-                              void main() {
-                                  gl_Position = vec4(a_pos, 1.0);
-                              })";
+  {
+    derp::shader s(RESOURCES_PATH "/shaders/simple.vert",
+                   RESOURCES_PATH "/shaders/simple.frag");
+    s.use();
 
-  const auto fragment_src = R"(#version 460 core
-                             out vec4 frag_color;
-                             void main() {
-                               frag_color = vec4(1.0);
-                             })";
+    // int loc = s["u_color"];
+    // std::println("loc = {}", loc);
 
-  const uint32_t vs = glCreateShader(GL_VERTEX_SHADER);
-  const uint32_t fs = glCreateShader(GL_FRAGMENT_SHADER);
+    s["u_color"] = glm::vec3(1.0f, 0.1f, 0.1f);
 
-  glShaderSource(vs, 1, &vertex_src, nullptr);
-  glCompileShader(vs);
+    glBindVertexArray(vao);
 
-  glShaderSource(fs, 1, &fragment_src, nullptr);
-  glCompileShader(fs);
+    while (!glfwWindowShouldClose(window)) {
+      glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+      glClear(GL_COLOR_BUFFER_BIT);
 
-  const uint32_t program = glCreateProgram();
+      glDrawArrays(GL_TRIANGLES, 0, 3);
 
-  glAttachShader(program, vs);
-  glAttachShader(program, fs);
-
-  glLinkProgram(program);
-  glValidateProgram(program);
-
-  glDetachShader(program, vs);
-  glDetachShader(program, fs);
-
-  glDeleteShader(vs);
-  glDeleteShader(fs);
-
-  glUseProgram(program);
-  glBindVertexArray(vao);
-
-  while (!glfwWindowShouldClose(window)) {
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-
-    glfwSwapBuffers(window);
-    glfwPollEvents();
+      glfwSwapBuffers(window);
+      glfwPollEvents();
+    }
   }
-
-  glDeleteProgram(program);
-
   glDeleteBuffers(1, &vbo);
   glDeleteVertexArrays(1, &vao);
 

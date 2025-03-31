@@ -65,14 +65,52 @@ int main() {
     glViewport(0, 0, fbSizeX, fbSizeY);
   }
 
-  constexpr float vertices[] = {
-      0.5f,  0.5f,  0.0f, 1.0f, 1.0f, // top right
-      0.5f,  -0.5f, 0.0f, 1.0f, 0.0f, // bottom right
-      -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, // bottom left
-      -0.5f, 0.5f,  0.0f, 0.0f, 1.0f  // top left
+  glEnable(GL_DEPTH_TEST);
+
+  constexpr float vertices[24 * 8] = {
+      // position          normal               uv
+      -0.5f, -0.5f, -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f, 0.0f, // front
+      -0.5f, 0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f, 1.0f, // front
+      0.5f,  0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 1.0f, 1.0f, // front
+      0.5f,  -0.5f, -0.5f, 0.0f,  0.0f,  -1.0f, 1.0f, 0.0f, // front
+      -0.5f, -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f, // back
+      0.5f,  -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f, // back
+      0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f, // back
+      -0.5f, 0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f, // back
+      -0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  0.0f, 0.0f, // top
+      -0.5f, 0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f, // top
+      0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f, // top
+      0.5f,  0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  1.0f, 0.0f, // top
+      -0.5f, -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  0.0f, 0.0f, // bottom
+      0.5f,  -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  0.0f, 1.0f, // bottom
+      0.5f,  -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  1.0f, 1.0f, // bottom
+      -0.5f, -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  1.0f, 0.0f, // bottom
+      -0.5f, -0.5f, 0.5f,  -1.0f, 0.0f,  0.0f,  0.0f, 0.0f, // left
+      -0.5f, 0.5f,  0.5f,  -1.0f, 0.0f,  0.0f,  0.0f, 1.0f, // left
+      -0.5f, 0.5f,  -0.5f, -1.0f, 0.0f,  0.0f,  1.0f, 1.0f, // left
+      -0.5f, -0.5f, -0.5f, -1.0f, 0.0f,  0.0f,  1.0f, 0.0f, // left
+      0.5f,  -0.5f, -0.5f, 1.0f,  0.0f,  0.0f,  0.0f, 0.0f, // right
+      0.5f,  0.5f,  -0.5f, 1.0f,  0.0f,  0.0f,  0.0f, 1.0f, // right
+      0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, // right
+      0.5f,  -0.5f, 0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, // right
   };
 
-  constexpr uint32_t indices[] = {0, 1, 3, 1, 2, 3};
+  // memory saved = 12 * 8 * 4 - 36 * 4
+  //              = 240 bytes per cube
+  constexpr uint32_t indices[36] = {
+      0,  1,  2,  // front
+      0,  2,  3,  // front
+      4,  5,  6,  // back
+      4,  6,  7,  // back
+      8,  9,  10, // top
+      8,  10, 11, // top
+      12, 13, 14, // bottom
+      12, 14, 15, // bottom
+      16, 17, 18, // left
+      16, 18, 19, // left
+      20, 21, 22, // right
+      20, 22, 23, // right
+  };
 
   uint32_t vao;
   glCreateVertexArrays(1, &vao);
@@ -85,7 +123,7 @@ int main() {
   glCreateBuffers(1, &ibo);
   glNamedBufferData(ibo, sizeof(indices), indices, GL_STATIC_DRAW);
 
-  glVertexArrayVertexBuffer(vao, 0, vbo, 0, 5 * sizeof(float));
+  glVertexArrayVertexBuffer(vao, 0, vbo, 0, 8 * sizeof(float));
   glVertexArrayElementBuffer(vao, ibo);
 
   glEnableVertexArrayAttrib(vao, 0);
@@ -93,13 +131,17 @@ int main() {
   glVertexArrayAttribBinding(vao, 0, 0);
 
   glEnableVertexArrayAttrib(vao, 1);
-  glVertexArrayAttribFormat(vao, 1, 2, GL_FLOAT, false, 3 * sizeof(float));
+  glVertexArrayAttribFormat(vao, 1, 2, GL_FLOAT, false, 6 * sizeof(float));
   glVertexArrayAttribBinding(vao, 1, 0);
 
   {
-    derp::shader s(RESOURCES_PATH "/shaders/texture.vert",
+    derp::shader s(RESOURCES_PATH "/shaders/transform.vert",
                    RESOURCES_PATH "/shaders/texture.frag");
     s.use();
+
+    auto model = glm::identity<glm::mat4>();
+    s["u_projection"] = glm::identity<glm::mat4>();
+    s["u_view"] = glm::identity<glm::mat4>();
 
     derp::texture t(RESOURCES_PATH "/textures/container.png");
     t.use();
@@ -108,9 +150,14 @@ int main() {
 
     while (!glfwWindowShouldClose(window)) {
       glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-      glClear(GL_COLOR_BUFFER_BIT);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+      s["u_model"] = model;
+      const auto theta = std::sin(static_cast<float>(glfwGetTime()));
+      model =
+          glm::rotate(model, glm::radians(theta), glm::vec3(1.0f, 0.3f, 0.5f));
+
+      glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
 
       glfwSwapBuffers(window);
       glfwPollEvents();

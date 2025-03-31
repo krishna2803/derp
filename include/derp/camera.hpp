@@ -57,6 +57,10 @@ public:
   auto mouse_move(float x_off, float y_off, bool constrain_pitch = true)
       -> void;
 
+  auto gamepad_move(float left_axis_x, float left_axis_y, float right_axis_x,
+                    float right_axis_y, float delta_time,
+                    bool constrain_pitch = true) -> void;
+
   auto mouse_scroll(float offset) -> void;
 
 private:

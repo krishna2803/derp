@@ -42,8 +42,8 @@ shader::shader(const std::string &vert_path, const std::string &frag_path)
   const char *vert_src = vert_str.c_str();
   const char *frag_src = frag_str.c_str();
 
-  std::println("[DEBUG] Vertex Shader Source:\n{}", vert_src);
-  std::println("[DEBUG] Fragment Shader Source:\n{}", frag_src);
+  // std::println("[DEBUG] Vertex Shader Source:\n{}", vert_src);
+  // std::println("[DEBUG] Fragment Shader Source:\n{}", frag_src);
 
   const uint32_t vs = glCreateShader(GL_VERTEX_SHADER);
   const uint32_t fs = glCreateShader(GL_FRAGMENT_SHADER);
@@ -98,18 +98,18 @@ shader::shader(const std::string &vert_path, const std::string &frag_path)
   glDeleteShader(vs);
   glDeleteShader(fs);
 
-  std::println("[DEBUG] Program with id = {} successfully created.", id);
+  // std::println("[DEBUG] Program with id = {} successfully created.", id);
 }
 
 shader::~shader() {
-  std::println("[DEBUG] attempting to delete program with id = {}", id);
+  // std::println("[DEBUG] attempting to delete program with id = {}", id);
   if (deleted)
     return;
   glUseProgram(0);
   if (glIsProgram(id))
     glDeleteProgram(id);
   deleted = true;
-  std::println("[DEBUG] program with id = {} deleted.", id);
+  // std::println("[DEBUG] program with id = {} deleted.", id);
 }
 
 shader::shader(shader &&other) noexcept
@@ -135,7 +135,7 @@ auto shader::use() const -> void {
         "[ERROR ] attempted to use deleted shader program with id = {}.", id));
   }
   glUseProgram(id);
-  std::println("[DEBUG] program with id = {} used.", id);
+  // std::println("[DEBUG] program with id = {} used.", id);
 }
 
 [[nodiscard]] auto shader::get_uniform_location(std::string_view name) const

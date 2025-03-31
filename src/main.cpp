@@ -13,6 +13,8 @@
 #include <derp/shader.hpp>
 
 #include <cstdint>
+#include <iostream>
+#include <ostream>
 #include <print>
 
 #include <glad/glad.h>
@@ -37,6 +39,8 @@ struct CameraSystem {
   mutable bool first_mouse = true;
   mutable float delta_time = 0.0f;
   mutable float last_frame = 0.0f;
+  mutable bool gamepad_present;
+  mutable GLFWgamepadstate gamepad;
 };
 
 int main() {
@@ -90,6 +94,12 @@ int main() {
   }
 
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+  if (glfwJoystickIsGamepad(GLFW_JOYSTICK_1)) {
+    const char *name = glfwGetGamepadName(GLFW_JOYSTICK_1);
+    std::println("[INFO] game pad {} connected", name);
+    cs.gamepad_present = true;
+  }
 
   glEnable(GL_DEPTH_TEST);
 
@@ -216,6 +226,37 @@ void process_input(GLFWwindow *window) {
   using dir = derp::camera::direction;
   const auto *cs =
       static_cast<CameraSystem *>(glfwGetWindowUserPointer(window));
+
+  if (cs->gamepad_present) {
+    glfwGetGamepadState(GLFW_JOYSTICK_1, &cs->gamepad);
+    const auto &[buttons, axes] = cs->gamepad;
+
+    constexpr float threshold = 0.01f;
+
+    auto left_axis_x = axes[GLFW_GAMEPAD_AXIS_LEFT_X];
+    if (std::abs(left_axis_x) < threshold)
+      left_axis_x = 0.0f;
+
+    auto left_axis_y = axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
+    if (std::abs(left_axis_y) < threshold)
+      left_axis_y = 0.0f;
+
+    auto right_axis_x = axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
+    if (std::abs(right_axis_x) < threshold)
+      right_axis_x = 0.0f;
+
+    auto right_axis_y = axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
+    if (std::abs(right_axis_y) < threshold)
+      right_axis_y = 0.0f;
+
+    cs->camera.gamepad_move(left_axis_x, left_axis_y, right_axis_x,
+                            right_axis_y, cs->delta_time);
+
+    return;
+  }
+
+  // cs->camera.gamepad_move(1.0f, 0.0f, 0.0f, 0.0f, cs->delta_time);
+
   if (glfwGetKey(window, GLFW_KEY_W) || glfwGetKey(window, GLFW_KEY_UP)) {
     cs->camera.keyboard_move(dir::FORWARD, cs->delta_time);
   }

@@ -50,7 +50,7 @@ texture::~texture() {
   if (glIsTexture(id)) {
     deleted = true;
     glDeleteTextures(1, &id);
-    std::println("[DEBUG] texture with id = {} deleted", id);
+    // std::println("[DEBUG] texture with id = {} deleted", id);
   }
 }
 

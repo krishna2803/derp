@@ -63,6 +63,23 @@ auto camera::mouse_move(const float x_off, const float y_off,
   }
   update_vectors();
 }
+auto camera::gamepad_move(const float left_axis_x, const float left_axis_y,
+                          const float right_axis_x, const float right_axis_y,
+                          const float delta_time, const bool constrain_pitch)
+    -> void {
+  const float velocity = speed * delta_time;
+  position -= front * velocity * left_axis_y;
+  position += right * velocity * left_axis_x;
+
+  yaw += sensitivity * right_axis_x * 10.0f;
+  pitch -= sensitivity * right_axis_y * 10.0f;
+
+  if (constrain_pitch) {
+    pitch = glm::clamp(pitch, -89.0f, 89.0f);
+  }
+
+  update_vectors();
+}
 
 auto camera::mouse_scroll(const float offset) -> void {
   fov = glm::clamp(fov - offset, 1.0f, 90.0f);

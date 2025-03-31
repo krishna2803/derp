@@ -15,11 +15,16 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Static GLM library" FORCE)
 add_subdirectory(include/glfw)
 add_subdirectory(include/glm)
 
+add_library(stb_image STATIC include/stb/stb_image.c)
+target_include_directories(stb_image PUBLIC ${PROJECT_SOURCE_DIR}/include)
+
 add_executable(derp
     src/main.cpp
     src/glad.c
     include/derp/shader.cpp
     include/derp/shader.hpp
+    include/derp/texture.cpp
+    include/derp/texture.hpp
 )
 
 target_compile_definitions(derp PRIVATE
@@ -33,4 +38,5 @@ target_include_directories(derp PRIVATE
 target_link_libraries(derp PRIVATE
     glfw
     glm::glm
+    stb_image
 )

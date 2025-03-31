@@ -111,7 +111,7 @@ public:
         get_uniform_location(std::string_view(std::forward<T>(name)));
     return {id, location};
   }
-}; // shader
+}; // class shader
 
 template <UniformType T>
 auto shader::UniformProxy::operator=(const T &value) const

@@ -9,8 +9,10 @@
 
 #include "shader.hpp"
 
+#include <cassert> // assert
 #include <fstream>
-#include <print> // std::print
+#include <print>     // std::print
+#include <stdexcept> // std::runtime_error
 
 namespace derp {
 
@@ -40,8 +42,8 @@ shader::shader(const std::string &vert_path, const std::string &frag_path)
   const char *vert_src = vert_str.c_str();
   const char *frag_src = frag_str.c_str();
 
-  std::println("[DEBUG] Vertex Shader Source: {}", vert_src);
-  std::println("[DEBUG] Fragment Shader Source: {}", frag_src);
+  std::println("[DEBUG] Vertex Shader Source:\n{}", vert_src);
+  std::println("[DEBUG] Fragment Shader Source:\n{}", frag_src);
 
   const uint32_t vs = glCreateShader(GL_VERTEX_SHADER);
   const uint32_t fs = glCreateShader(GL_FRAGMENT_SHADER);
@@ -98,6 +100,7 @@ shader::shader(const std::string &vert_path, const std::string &frag_path)
 
   std::println("[DEBUG] Program with id = {} successfully created.", id);
 }
+
 shader::~shader() {
   std::println("[DEBUG] attempting to delete program with id = {}", id);
   if (deleted)
@@ -126,7 +129,7 @@ auto shader::operator=(shader &&other) noexcept -> shader & {
   return *this;
 }
 
-auto shader::use() const {
+auto shader::use() const -> void {
   if (deleted) {
     throw std::runtime_error(std::format(
         "[ERROR ] attempted to use deleted shader program with id = {}.", id));
@@ -135,12 +138,8 @@ auto shader::use() const {
   std::println("[DEBUG] program with id = {} used.", id);
 }
 
-auto shader::UniformProxy::get_uniform_name_by_location(uint32_t, int loc)
-    -> std::string {
-  return std::format("uniform @ location {}", loc);
-}
-
-[[nodiscard]] int shader::get_uniform_location(std::string_view name) const {
+[[nodiscard]] auto shader::get_uniform_location(std::string_view name) const
+    -> int {
   if (deleted) {
     throw std::runtime_error(std::format(
         "Attempted to get uniform location '{}' on deleted shader program",

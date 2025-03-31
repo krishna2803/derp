@@ -7,7 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "shader.hpp"
+#include "derp/texture.hpp"
+
+#include <derp/shader.hpp>
 
 #include <cstdint>
 #include <print>
@@ -64,33 +66,43 @@ int main() {
   }
 
   constexpr float vertices[] = {
-      -0.5f, -0.5f, 0.0f, // Bottom-left
-      0.5f,  -0.5f, 0.0f, // Bottom-right
-      0.0f,  0.5f,  0.0f  // Top-center
+      0.5f,  0.5f,  0.0f, 1.0f, 1.0f, // top right
+      0.5f,  -0.5f, 0.0f, 1.0f, 0.0f, // bottom right
+      -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, // bottom left
+      -0.5f, 0.5f,  0.0f, 0.0f, 1.0f  // top left
   };
+
+  constexpr uint32_t indices[] = {0, 1, 3, 1, 2, 3};
 
   uint32_t vao;
   glCreateVertexArrays(1, &vao);
 
   uint32_t vbo;
   glCreateBuffers(1, &vbo);
-  glNamedBufferStorage(vbo, sizeof(vertices), vertices, 0);
+  glNamedBufferData(vbo, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  glVertexArrayVertexBuffer(vao, 0, vbo, 0, 3 * sizeof(float));
+  uint32_t ibo;
+  glCreateBuffers(1, &ibo);
+  glNamedBufferData(ibo, sizeof(indices), indices, GL_STATIC_DRAW);
+
+  glVertexArrayVertexBuffer(vao, 0, vbo, 0, 5 * sizeof(float));
+  glVertexArrayElementBuffer(vao, ibo);
 
   glEnableVertexArrayAttrib(vao, 0);
   glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, false, 0);
   glVertexArrayAttribBinding(vao, 0, 0);
 
+  glEnableVertexArrayAttrib(vao, 1);
+  glVertexArrayAttribFormat(vao, 1, 2, GL_FLOAT, false, 3 * sizeof(float));
+  glVertexArrayAttribBinding(vao, 1, 0);
+
   {
-    derp::shader s(RESOURCES_PATH "/shaders/simple.vert",
-                   RESOURCES_PATH "/shaders/simple.frag");
+    derp::shader s(RESOURCES_PATH "/shaders/texture.vert",
+                   RESOURCES_PATH "/shaders/texture.frag");
     s.use();
 
-    // int loc = s["u_color"];
-    // std::println("loc = {}", loc);
-
-    s["u_color"] = glm::vec3(1.0f, 0.1f, 0.1f);
+    derp::texture t(RESOURCES_PATH "/textures/container.png");
+    t.use();
 
     glBindVertexArray(vao);
 
@@ -98,12 +110,14 @@ int main() {
       glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
       glClear(GL_COLOR_BUFFER_BIT);
 
-      glDrawArrays(GL_TRIANGLES, 0, 3);
+      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
       glfwSwapBuffers(window);
       glfwPollEvents();
     }
   }
+
+  glDeleteBuffers(1, &ibo);
   glDeleteBuffers(1, &vbo);
   glDeleteVertexArrays(1, &vao);
 

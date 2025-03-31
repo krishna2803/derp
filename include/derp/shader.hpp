@@ -9,12 +9,10 @@
 
 #pragma once
 
-#include <cassert>       // assert
 #include <concepts>      // std::same_as, std::convertible_to
 #include <cstdint>       // uint32_t
 #include <format>        // std::format
 #include <functional>    // std::hash, std::equal_to
-#include <stdexcept>     // std::runtime_error
 #include <string>        // std::string
 #include <string_view>   // std::string_view
 #include <type_traits>   // std::decay_t
@@ -55,6 +53,18 @@ struct StringViewHash {
 };
 
 class shader {
+private:
+  uint32_t id = 0;
+  bool deleted = true;
+
+  using UniformMap =
+      std::unordered_map<std::string, int, StringViewHash,
+                         std::equal_to<> // for transparent lookup
+                         >;
+  mutable UniformMap uniform_map;
+
+  [[nodiscard]] int get_uniform_location(std::string_view name) const;
+
 public:
   shader() = delete;
   shader(const std::string &vert_path, const std::string &frag_path);
@@ -67,10 +77,10 @@ public:
   shader &operator=(shader &&other) noexcept;
 
   ~shader();
-
-  auto use() const;
+  auto use() const -> void;
 
   class UniformProxy {
+  private:
     friend class shader;
 
     uint32_t program_id;
@@ -89,13 +99,8 @@ public:
 
     template <UniformType T>
     auto operator=(const T &value) const -> const UniformProxy &;
-
     operator int() const { return location; }
 
-    // Note: This method doesn't actually query OpenGL for the name.
-    // It just provides a descriptive string based on the location.
-    static auto get_uniform_name_by_location(uint32_t /*prog_id*/, int loc)
-        -> std::string;
   }; // UniformProxy
 
   template <typename T>
@@ -106,34 +111,18 @@ public:
         get_uniform_location(std::string_view(std::forward<T>(name)));
     return {id, location};
   }
-
-private:
-  uint32_t id = 0;
-  bool deleted = true;
-
-  using UniformMap =
-      std::unordered_map<std::string, int,
-                         StringViewHash, // Use our transparent hash
-                         std::equal_to<> // Use transparent equality
-                                         // (std::equal_to<void>)
-                         >;
-  mutable UniformMap uniform_map;
-
-  [[nodiscard]] int get_uniform_location(std::string_view name) const;
-
-}; // shader
+}; // class shader
 
 template <UniformType T>
 auto shader::UniformProxy::operator=(const T &value) const
-    -> const shader::UniformProxy & {
+    -> const UniformProxy & {
   int current_program = 0;
   glGetIntegerv(GL_CURRENT_PROGRAM, &current_program);
   if (static_cast<uint32_t>(current_program) != program_id) {
-    throw std::runtime_error(std::format(
-        "Attempted to set uniform for shader program {} ('{}') "
-        "when program {} is active.",
-        program_id, get_uniform_name_by_location(program_id, location),
-        current_program));
+    throw std::runtime_error(
+        std::format("Attempted to set uniform for shader program {} "
+                    "when program {} is active.",
+                    program_id, current_program));
   }
 
   assert(location != -1);

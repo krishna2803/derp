@@ -90,13 +90,16 @@ int main() {
     // int loc = s["u_color"];
     // std::println("loc = {}", loc);
 
-    s["u_color"] = glm::vec3(1.0f, 0.1f, 0.1f);
-
     glBindVertexArray(vao);
 
     while (!glfwWindowShouldClose(window)) {
       glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
       glClear(GL_COLOR_BUFFER_BIT);
+
+      const auto red = (std::sin(glfwGetTime()) + 1.0) / 2.0;
+      const auto green = (std::cos(glfwGetTime()) + 1.0) / 2.0;
+      const auto blue = red * green;
+      s["u_color"] = glm::vec3(red, green, blue);
 
       glDrawArrays(GL_TRIANGLES, 0, 3);
 

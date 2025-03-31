@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "derp/camera.hpp"
 #include "derp/texture.hpp"
 
 #include <derp/shader.hpp>
@@ -18,10 +19,25 @@
 
 #include <GLFW/glfw3.h>
 
-void framebuffer_size_callback(GLFWwindow *window, const int width,
-                               const int height) {
+constexpr int WIDTH = 800;
+constexpr int HEIGHT = 600;
+
+void fb_resize_callback(GLFWwindow *window, const int width, const int height) {
   glViewport(0, 0, width, height);
 }
+
+void mouse_callback(GLFWwindow *window, double x, double y);
+void scroll_callback(GLFWwindow *window, double x_off, double y_off);
+void process_input(GLFWwindow *window);
+
+struct CameraSystem {
+  mutable derp::camera camera;
+  mutable float last_x = WIDTH / 2.0f;
+  mutable float last_y = HEIGHT / 2.0f;
+  mutable bool first_mouse = true;
+  mutable float delta_time = 0.0f;
+  mutable float last_frame = 0.0f;
+};
 
 int main() {
 
@@ -40,7 +56,8 @@ int main() {
   // glfwWindowHint(GLFW_DECORATED, false);
   glfwWindowHint(GLFW_RESIZABLE, false);
 
-  GLFWwindow *window = glfwCreateWindow(640, 480, "derp", nullptr, nullptr);
+  GLFWwindow *window =
+      glfwCreateWindow(WIDTH, HEIGHT, "derp", nullptr, nullptr);
   if (!window) {
     glfwTerminate();
     std::println("[ERROR] Couldn't create GLFW window.");
@@ -48,7 +65,14 @@ int main() {
   }
 
   glfwMakeContextCurrent(window);
-  glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+  CameraSystem cs{derp::camera(glm::vec3(0.0f, 0.0f, 3.0f))};
+
+  glfwSetWindowUserPointer(window, &cs);
+
+  glfwSetFramebufferSizeCallback(window, fb_resize_callback);
+  glfwSetCursorPosCallback(window, mouse_callback);
+  glfwSetScrollCallback(window, scroll_callback);
 
   if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
     std::println("[ERROR] Couldn't initialize GLAD.");
@@ -64,6 +88,8 @@ int main() {
     glfwGetFramebufferSize(window, &fbSizeX, &fbSizeY);
     glViewport(0, 0, fbSizeX, fbSizeY);
   }
+
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
   glEnable(GL_DEPTH_TEST);
 
@@ -140,8 +166,11 @@ int main() {
     s.use();
 
     auto model = glm::identity<glm::mat4>();
-    s["u_projection"] = glm::identity<glm::mat4>();
-    s["u_view"] = glm::identity<glm::mat4>();
+
+    const auto projection =
+        glm::perspective(glm::radians(cs.camera.get_fov()),
+                         static_cast<float>(WIDTH) / HEIGHT, 0.1f, 100.0f);
+    s["u_projection"] = projection;
 
     derp::texture t(RESOURCES_PATH "/textures/container.png");
     t.use();
@@ -152,10 +181,14 @@ int main() {
       glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+      const auto current_frame = static_cast<float>(glfwGetTime());
+      cs.delta_time = current_frame - cs.last_frame;
+      cs.last_frame = current_frame;
+
+      process_input(window);
+
       s["u_model"] = model;
-      const auto theta = std::sin(static_cast<float>(glfwGetTime()));
-      model =
-          glm::rotate(model, glm::radians(theta), glm::vec3(1.0f, 0.3f, 0.5f));
+      s["u_view"] = cs.camera.get_view_matrix();
 
       glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
 
@@ -174,4 +207,52 @@ int main() {
   std::println("[INFO] Stopping...");
 
   return 0;
+}
+void process_input(GLFWwindow *window) {
+  if (glfwGetKey(window, GLFW_KEY_ESCAPE) || glfwGetKey(window, GLFW_KEY_Q)) {
+    glfwSetWindowShouldClose(window, true);
+  }
+
+  using dir = derp::camera::direction;
+  const auto *cs =
+      static_cast<CameraSystem *>(glfwGetWindowUserPointer(window));
+  if (glfwGetKey(window, GLFW_KEY_W) || glfwGetKey(window, GLFW_KEY_UP)) {
+    cs->camera.keyboard_move(dir::FORWARD, cs->delta_time);
+  }
+  if (glfwGetKey(window, GLFW_KEY_A) || glfwGetKey(window, GLFW_KEY_LEFT)) {
+    cs->camera.keyboard_move(dir::LEFT, cs->delta_time);
+  }
+  if (glfwGetKey(window, GLFW_KEY_S) || glfwGetKey(window, GLFW_KEY_DOWN)) {
+    cs->camera.keyboard_move(dir::BACKWARD, cs->delta_time);
+  }
+  if (glfwGetKey(window, GLFW_KEY_D) || glfwGetKey(window, GLFW_KEY_RIGHT)) {
+    cs->camera.keyboard_move(dir::RIGHT, cs->delta_time);
+  }
+}
+void mouse_callback(GLFWwindow *window, const double x, const double y) {
+  const auto *cs =
+      static_cast<CameraSystem *>(glfwGetWindowUserPointer(window));
+
+  const auto x_pos = static_cast<float>(x);
+  const auto y_pos = static_cast<float>(y);
+
+  if (cs->first_mouse) {
+    cs->last_x = x_pos;
+    cs->last_y = y_pos;
+    cs->first_mouse = false;
+  }
+
+  const float x_off = x_pos - cs->last_x;
+  const float y_off = cs->last_y - y_pos; // y axis is flipped!
+
+  cs->last_x = x_pos;
+  cs->last_y = y_pos;
+
+  cs->camera.mouse_move(x_off, y_off);
+}
+void scroll_callback(GLFWwindow *window, const double x_off,
+                     const double y_off) {
+  const auto *cs =
+      static_cast<CameraSystem *>(glfwGetWindowUserPointer(window));
+  cs->camera.mouse_scroll(static_cast<float>(y_off));
 }

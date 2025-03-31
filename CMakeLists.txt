@@ -25,6 +25,8 @@ add_executable(derp
     include/derp/shader.hpp
     include/derp/texture.cpp
     include/derp/texture.hpp
+    include/derp/camera.cpp
+    include/derp/camera.hpp
 )
 
 target_compile_definitions(derp PRIVATE

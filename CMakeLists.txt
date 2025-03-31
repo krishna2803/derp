@@ -16,9 +16,10 @@ add_subdirectory(include/glfw)
 add_subdirectory(include/glm)
 
 add_executable(derp
-    src/main.cpp src/glad.c
-    include/shader.cpp
-    include/shader.hpp
+    src/main.cpp
+    src/glad.c
+    include/derp/shader.cpp
+    include/derp/shader.hpp
 )
 
 target_compile_definitions(derp PRIVATE

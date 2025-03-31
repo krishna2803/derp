@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "shader.hpp"
+#include <derp/shader.hpp>
 
 #include <cstdint>
 #include <print>

@@ -42,8 +42,8 @@ shader::shader(const std::string &vert_path, const std::string &frag_path)
   const char *vert_src = vert_str.c_str();
   const char *frag_src = frag_str.c_str();
 
-  std::println("[DEBUG] Vertex Shader Source: {}", vert_src);
-  std::println("[DEBUG] Fragment Shader Source: {}", frag_src);
+  std::println("[DEBUG] Vertex Shader Source:\n{}", vert_src);
+  std::println("[DEBUG] Fragment Shader Source:\n{}", frag_src);
 
   const uint32_t vs = glCreateShader(GL_VERTEX_SHADER);
   const uint32_t fs = glCreateShader(GL_FRAGMENT_SHADER);

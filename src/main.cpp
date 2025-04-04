@@ -119,11 +119,14 @@ int main() {
 
     const auto projection =
         glm::perspective(glm::radians(cs.camera.get_fov()),
-                         static_cast<float>(WIDTH) / HEIGHT, 0.1f, 100.0f);
+                         static_cast<float>(WIDTH) / HEIGHT, 0.1f, 500.0f);
     s["u_projection"] = projection;
 
     derp::texture t(RESOURCES_PATH "/textures/container.png");
     t.use();
+
+    auto m_test =
+        derp::mesh::from_obj(RESOURCES_PATH "/models/mario/mario.obj");
 
     m.use();
 
@@ -141,6 +144,8 @@ int main() {
       s["u_view"] = cs.camera.get_view_matrix();
 
       m.draw();
+
+      m_test.use_and_draw();
 
       glfwSwapBuffers(window);
       glfwPollEvents();
@@ -187,6 +192,10 @@ void process_input(GLFWwindow *window) {
 
     cs->camera.gamepad_move(left_axis_x, left_axis_y, right_axis_x,
                             right_axis_y, cs->delta_time);
+
+    if (buttons[GLFW_GAMEPAD_BUTTON_B] == GLFW_PRESS) {
+      glfwSetWindowShouldClose(window, true);
+    }
   }
 
   if (glfwGetKey(window, GLFW_KEY_W) || glfwGetKey(window, GLFW_KEY_UP)) {

@@ -17,7 +17,9 @@
 #include "rapidobj/rapidobj.hpp"
 
 #include <format>
+#include <numeric>
 #include <print>
+#include <unordered_map>
 #include <vector>
 
 namespace derp {
@@ -73,6 +75,10 @@ public:
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec2 uv;
+
+    explicit vertex(const glm::vec3 &pos, const glm::vec3 &nrm,
+                    const glm::vec2 &uv)
+        : position(pos), normal(nrm), uv(uv) {}
 
     [[nodiscard]] std::string to_str() const {
       return std::format(
@@ -153,22 +159,84 @@ public:
 
     if (result.error) {
       throw std::runtime_error(
-          std::format("[ERROR] {} {}", filepath, result.error.code.message()));
+          std::format("[ERROR] {}: {}", filepath, result.error.code.message()));
     }
 
-    if (const bool success = rapidobj::Triangulate(result); !success) {
+    if (!rapidobj::Triangulate(result)) {
       throw std::runtime_error(
-          std::format("[ERROR] {}:", result.error.code.message()));
+          std::format("[ERROR] Failed to triangulate mesh: {}",
+                      result.error.code.message()));
     }
 
-    size_t num_triangles{};
+    std::vector<vertex> vertices;
+    std::vector<uint32_t> indices;
+    std::unordered_map<std::string, uint32_t> unique_vertices;
+
+    const size_t total_indices =
+        std::accumulate(result.shapes.begin(), result.shapes.end(), 0,
+                        [](size_t sum, const auto &shape) {
+                          return sum + shape.mesh.indices.size();
+                        });
+
+    vertices.reserve(total_indices / 2);
+    indices.reserve(total_indices);
+
+    auto get_position = [&](const uint32_t index) {
+      return glm::vec3{result.attributes.positions[3 * index],
+                       result.attributes.positions[3 * index + 1],
+                       result.attributes.positions[3 * index + 2]};
+    };
+
+    auto get_normal = [&](const int32_t index) {
+      return glm::vec3{result.attributes.normals[3 * index],
+                       result.attributes.normals[3 * index + 1],
+                       result.attributes.normals[3 * index + 2]};
+    };
+
+    auto get_texcoord = [&](const int32_t index) {
+      return glm::vec2{result.attributes.texcoords[2 * index],
+                       result.attributes.texcoords[2 * index + 1]};
+    };
+
     for (const auto &shape : result.shapes) {
-      num_triangles += shape.mesh.num_face_vertices.size();
+      for (const auto &[position_index, texcoord_index, normal_index] :
+           shape.mesh.indices) {
+
+        const std::string key = std::to_string(position_index) + "_" +
+                                std::to_string(texcoord_index) + "_" +
+                                std::to_string(normal_index);
+
+        if (unique_vertices.contains(key)) {
+          indices.push_back(unique_vertices[key]);
+          continue;
+        }
+
+        const auto pos = get_position(position_index);
+        const auto nrm = get_normal(normal_index);
+        const auto uv = get_texcoord(texcoord_index);
+
+        vertices.emplace_back(pos, nrm, uv);
+
+        const auto new_index = static_cast<uint32_t>(vertices.size() - 1);
+        unique_vertices[key] = new_index;
+        indices.push_back(new_index);
+      }
     }
 
-    std::println("n_shapes: {}", result.shapes.size());
-    std::println("n_materials: {}", result.materials.size());
-    std::println("n_triangles: {}", num_triangles);
+    if (vertices.empty()) {
+      throw std::runtime_error(
+          std::format("[ERROR] No vertices found in {}", filepath));
+    }
+
+    std::println("[INFO] Successfully loaded mesh from {}", filepath);
+    std::println("  - Total vertices: {}", vertices.size());
+    std::println("  - Total indices: {}", indices.size());
+    std::println("  - Shapes processed: {}", result.shapes.size());
+    std::println("  - Materials found: {}", result.materials.size());
+
+    std::println("{}", result.materials[0].name);
+
+    return mesh(std::move(vertices), std::move(indices));
   }
 }; // class mesh
 

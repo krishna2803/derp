@@ -19,7 +19,7 @@ class camera {
 private:
   static constexpr float YAW = -90.0f;
   static constexpr float PITCH = 0.0f;
-  static constexpr float SPEED = 2.5f;
+  static constexpr float SPEED = 10.5f;
   static constexpr float SENSITIVITY = 0.1f;
   static constexpr float FOV = 45.0f;
 

@@ -1,4 +1,5 @@
-//===-- Implementation for texture class ----------------------------------===//
+//===-- Implementation of texture class
+//------------------------------------===//
 //
 // Copyright (c) 2025 Krishna Pandey. All rights reserved.
 // SPDX-License-Identifier: MIT
@@ -11,13 +12,13 @@
 
 #include <format>
 #include <glad/glad.h>
-#include <print>
 #include <stb/stb_image.h>
 #include <stdexcept>
 
 namespace derp {
 
-texture::texture(const std::string &texture_path) {
+texture::texture(const std::string &texture_path, const texture_type _type)
+    : _type(_type) {
   int w, h, n;
   stbi_set_flip_vertically_on_load(true);
 
@@ -44,6 +45,7 @@ texture::texture(const std::string &texture_path) {
   stbi_image_free(data);
   deleted = false;
 }
+
 texture::~texture() {
   if (deleted)
     return;

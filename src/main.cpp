@@ -8,13 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "derp/camera.hpp"
+#include "derp/mesh.hpp"
 #include "derp/texture.hpp"
 
 #include <derp/shader.hpp>
 
-#include <cstdint>
 #include <iostream>
-#include <ostream>
 #include <print>
 
 #include <glad/glad.h>
@@ -46,7 +45,6 @@ struct CameraSystem {
 int main() {
 
   std::println("[INFO] Starting...");
-
   if (!glfwInit()) {
     std::println("[ERROR] Couldn't initialize GLFW.");
     return -1;
@@ -103,75 +101,17 @@ int main() {
 
   glEnable(GL_DEPTH_TEST);
 
-  constexpr float vertices[24 * 8] = {
-      // position          normal               uv
-      -0.5f, -0.5f, -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f, 0.0f, // front
-      -0.5f, 0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 0.0f, 1.0f, // front
-      0.5f,  0.5f,  -0.5f, 0.0f,  0.0f,  -1.0f, 1.0f, 1.0f, // front
-      0.5f,  -0.5f, -0.5f, 0.0f,  0.0f,  -1.0f, 1.0f, 0.0f, // front
-      -0.5f, -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f, // back
-      0.5f,  -0.5f, 0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f, // back
-      0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f, // back
-      -0.5f, 0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f, // back
-      -0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  0.0f, 0.0f, // top
-      -0.5f, 0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f, // top
-      0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f, // top
-      0.5f,  0.5f,  -0.5f, 0.0f,  1.0f,  0.0f,  1.0f, 0.0f, // top
-      -0.5f, -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  0.0f, 0.0f, // bottom
-      0.5f,  -0.5f, -0.5f, 0.0f,  -1.0f, 0.0f,  0.0f, 1.0f, // bottom
-      0.5f,  -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  1.0f, 1.0f, // bottom
-      -0.5f, -0.5f, 0.5f,  0.0f,  -1.0f, 0.0f,  1.0f, 0.0f, // bottom
-      -0.5f, -0.5f, 0.5f,  -1.0f, 0.0f,  0.0f,  0.0f, 0.0f, // left
-      -0.5f, 0.5f,  0.5f,  -1.0f, 0.0f,  0.0f,  0.0f, 1.0f, // left
-      -0.5f, 0.5f,  -0.5f, -1.0f, 0.0f,  0.0f,  1.0f, 1.0f, // left
-      -0.5f, -0.5f, -0.5f, -1.0f, 0.0f,  0.0f,  1.0f, 0.0f, // left
-      0.5f,  -0.5f, -0.5f, 1.0f,  0.0f,  0.0f,  0.0f, 0.0f, // right
-      0.5f,  0.5f,  -0.5f, 1.0f,  0.0f,  0.0f,  0.0f, 1.0f, // right
-      0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, // right
-      0.5f,  -0.5f, 0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, // right
-  };
-
-  // memory saved = 12 * 8 * 4 - 36 * 4
-  //              = 240 bytes per cube
-  constexpr uint32_t indices[36] = {
-      0,  1,  2,  // front
-      0,  2,  3,  // front
-      4,  5,  6,  // back
-      4,  6,  7,  // back
-      8,  9,  10, // top
-      8,  10, 11, // top
-      12, 13, 14, // bottom
-      12, 14, 15, // bottom
-      16, 17, 18, // left
-      16, 18, 19, // left
-      20, 21, 22, // right
-      20, 22, 23, // right
-  };
-
-  uint32_t vao;
-  glCreateVertexArrays(1, &vao);
-
-  uint32_t vbo;
-  glCreateBuffers(1, &vbo);
-  glNamedBufferData(vbo, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-  uint32_t ibo;
-  glCreateBuffers(1, &ibo);
-  glNamedBufferData(ibo, sizeof(indices), indices, GL_STATIC_DRAW);
-
-  glVertexArrayVertexBuffer(vao, 0, vbo, 0, 8 * sizeof(float));
-  glVertexArrayElementBuffer(vao, ibo);
-
-  glEnableVertexArrayAttrib(vao, 0);
-  glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, false, 0);
-  glVertexArrayAttribBinding(vao, 0, 0);
-
-  glEnableVertexArrayAttrib(vao, 1);
-  glVertexArrayAttribFormat(vao, 1, 2, GL_FLOAT, false, 6 * sizeof(float));
-  glVertexArrayAttribBinding(vao, 1, 0);
-
   {
-    derp::shader s(RESOURCES_PATH "/shaders/transform.vert",
+    const auto *vertex_data =
+        reinterpret_cast<const derp::mesh::vertex *>(derp::cube_vertices);
+    std::vector cube_vert(vertex_data, vertex_data + 24);
+
+    std::vector cube_ind(std::begin(derp::cube_indices),
+                         std::end(derp::cube_indices));
+
+    derp::mesh m(std::move(cube_vert), std::move(cube_ind));
+
+    derp::shader s(RESOURCES_PATH "/shaders/normal.vert",
                    RESOURCES_PATH "/shaders/texture.frag");
     s.use();
 
@@ -185,7 +125,7 @@ int main() {
     derp::texture t(RESOURCES_PATH "/textures/container.png");
     t.use();
 
-    glBindVertexArray(vao);
+    m.use();
 
     while (!glfwWindowShouldClose(window)) {
       glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -200,16 +140,12 @@ int main() {
       s["u_model"] = model;
       s["u_view"] = cs.camera.get_view_matrix();
 
-      glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+      m.draw();
 
       glfwSwapBuffers(window);
       glfwPollEvents();
     }
   }
-
-  glDeleteBuffers(1, &ibo);
-  glDeleteBuffers(1, &vbo);
-  glDeleteVertexArrays(1, &vao);
 
   glfwDestroyWindow(window);
   glfwTerminate();
@@ -251,11 +187,7 @@ void process_input(GLFWwindow *window) {
 
     cs->camera.gamepad_move(left_axis_x, left_axis_y, right_axis_x,
                             right_axis_y, cs->delta_time);
-
-    return;
   }
-
-  // cs->camera.gamepad_move(1.0f, 0.0f, 0.0f, 0.0f, cs->delta_time);
 
   if (glfwGetKey(window, GLFW_KEY_W) || glfwGetKey(window, GLFW_KEY_UP)) {
     cs->camera.keyboard_move(dir::FORWARD, cs->delta_time);

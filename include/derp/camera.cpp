@@ -1,4 +1,4 @@
-//===-- Implementation for camera class -----------------------------------===//
+//===-- Implementation of camera class ------------------------------------===//
 //
 // Copyright (c) 2025 Krishna Pandey. All rights reserved.
 // SPDX-License-Identifier: MIT
@@ -68,8 +68,8 @@ auto camera::gamepad_move(const float left_axis_x, const float left_axis_y,
                           const float delta_time, const bool constrain_pitch)
     -> void {
   const float velocity = speed * delta_time;
-  position -= front * velocity * left_axis_y;
-  position += right * velocity * left_axis_x;
+  position -= front * velocity * left_axis_y * delta_time * 100.0f;
+  position += right * velocity * left_axis_x * delta_time * 100.0f;
 
   yaw += sensitivity * right_axis_x * 10.0f;
   pitch -= sensitivity * right_axis_y * 10.0f;

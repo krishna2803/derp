@@ -14,6 +14,7 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Static GLM library" FORCE)
 
 add_subdirectory(include/glfw)
 add_subdirectory(include/glm)
+add_subdirectory(include/rapidobj)
 
 add_library(stb_image STATIC include/stb/stb_image.c)
 target_include_directories(stb_image PUBLIC ${PROJECT_SOURCE_DIR}/include)
@@ -27,6 +28,10 @@ add_executable(derp
     include/derp/texture.hpp
     include/derp/camera.cpp
     include/derp/camera.hpp
+    include/derp/mesh.cpp
+    include/derp/mesh.hpp
+    include/derp/model.cpp
+    include/derp/model.hpp
 )
 
 target_compile_definitions(derp PRIVATE
@@ -39,6 +44,7 @@ target_include_directories(derp PRIVATE
 
 target_link_libraries(derp PRIVATE
     glfw
-    glm::glm
+    glm
     stb_image
+    rapidobj
 )

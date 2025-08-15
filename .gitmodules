@@ -7,5 +7,5 @@
   url = https://github.com/g-truc/glm
 
 [submodule "include/rapidobj"]
-  path = include/rapidobj
-  url = https://github.com/guybrush77/rapidobj
+	path = include/rapidobj
+	url = git@github.com:guybrush77/rapidobj.git
